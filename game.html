@@ -3,99 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PRIZE ANALYZER PRO - 落下速度特定</title>
+    <title>TIME ATTACK 2P</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .rod-animation { animation: drop var(--drop-time) ease-in forwards; }
-        @keyframes drop {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(160px); }
-        }
-        .disk-rotate { animation: rotate var(--period) linear infinite; }
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@800&display=swap');
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .player-area { transition: all 0.2s ease; }
     </style>
 </head>
-<body class="bg-zinc-950 text-slate-200 font-mono p-4 flex flex-col items-center">
+<body class="bg-zinc-950 text-white min-h-screen flex flex-col overflow-hidden">
 
-    <div class="max-w-md w-full bg-zinc-900 border-2 border-red-600 rounded-2xl p-6 shadow-2xl">
-        <h1 class="text-center text-red-500 font-black text-xl mb-6 italic italic">DROP VELOCITY ANALYZER</h1>
+    <div id="p2-area" class="flex-1 bg-zinc-900 flex flex-col items-center justify-center rotate-180 border-b border-zinc-800 relative">
+        <div class="absolute top-4 text-[10px] tracking-[0.5em] text-zinc-500 uppercase">Player 2</div>
+        <div id="p2-result" class="text-6xl mono mb-4 text-zinc-700">0.000</div>
+        <button id="p2-btn" class="px-12 py-6 bg-red-600 rounded-2xl font-black text-xl active:scale-95 transition-transform">STOP</button>
+    </div>
 
-        <div class="relative w-64 h-64 mx-auto mb-8 bg-black rounded-full border-4 border-zinc-800 overflow-hidden">
-            <div id="target-disk" class="absolute inset-0 flex justify-center">
-                <div class="w-8 h-8 bg-emerald-500 rounded-full mt-2 shadow-[0_0_15px_#10b981]"></div>
-            </div>
-            <div id="red-rod" class="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-12 bg-red-600 shadow-[0_0_10px_#dc2626] z-10"></div>
-            <div class="absolute top-[160px] w-full border-t border-dashed border-zinc-600"></div>
-        </div>
+    <div class="bg-white text-black py-2 px-6 flex justify-between items-center font-bold italic">
+        <span>TARGET: <span id="target-time">5.00</span>s</span>
+        <button id="reset-btn" class="bg-black text-white px-4 py-1 text-xs rounded-full">RESET</button>
+        <span>VS MODE</span>
+    </div>
 
-        <div class="grid grid-cols-2 gap-4 mb-6">
-            <div class="bg-zinc-800 p-3 rounded-lg">
-                <label class="text-[10px] text-zinc-500 block">回転周期 (秒/周)</label>
-                <input type="number" id="input-period" value="3.50" step="0.01" class="bg-transparent text-xl text-white w-full outline-none">
-            </div>
-            <div class="bg-zinc-800 p-3 rounded-lg border border-red-900/50">
-                <label class="text-[10px] text-red-500 block text-center font-bold underline">落下時間 (秒)</label>
-                <input type="number" id="input-drop" value="0.45" step="0.01" class="bg-transparent text-xl text-red-500 w-full text-center font-bold outline-none">
-            </div>
-        </div>
-
-        <div class="bg-zinc-800 p-4 rounded-xl border border-zinc-700 mb-6 text-center">
-            <p class="text-[10px] text-zinc-400">必要な「見越し角」</p>
-            <div id="result-angle" class="text-4xl font-black text-white">0.0°</div>
-            <p class="text-[10px] text-zinc-500 mt-2">※ターゲットがこの角度手前に来た時に押せ！</p>
-        </div>
-
-        <div class="flex gap-2">
-            <button id="test-btn" class="flex-1 py-4 bg-red-600 hover:bg-red-500 active:scale-95 rounded-xl font-bold transition-all shadow-lg">
-                DROP TEST (押す)
-            </button>
-        </div>
-
-        <div class="mt-6 text-[10px] text-zinc-500 leading-relaxed border-t border-zinc-800 pt-4">
-            【攻略手順】<br>
-            1. 実機の円盤の周期を前回のツール等で測り、入力する。<br>
-            2. 「落下時間」を微調整しながら、実機の棒の降りる速さと画面を同期させる。<br>
-            3. 算出された「見越し角」の位置にターゲットが来たら、迷わず押す。
-        </div>
+    <div id="p1-area" class="flex-1 bg-zinc-900 flex flex-col items-center justify-center border-t border-zinc-800 relative">
+        <div class="absolute top-4 text-[10px] tracking-[0.5em] text-zinc-500 uppercase">Player 1</div>
+        <div id="p1-result" class="text-6xl mono mb-4 text-zinc-700">0.000</div>
+        <button id="p1-btn" class="px-12 py-6 bg-blue-600 rounded-2xl font-black text-xl active:scale-95 transition-transform">STOP</button>
     </div>
 
     <script>
-        const rod = document.getElementById('red-rod');
-        const disk = document.getElementById('target-disk');
-        const inputPeriod = document.getElementById('input-period');
-        const inputDrop = document.getElementById('input-drop');
-        const resultAngle = document.getElementById('result-angle');
+        let target = 5.00;
+        let p1Start, p2Start;
+        let p1Score = null, p2Score = null;
 
-        function updateValues() {
-            const period = parseFloat(inputPeriod.value) || 1;
-            const dropTime = parseFloat(inputDrop.value) || 0;
-            
-            // 回転速度と落下時間から、ボタンを押すべき角度（見越し角）を計算
-            // 360度 * (落下時間 / 1周の時間)
-            const leadAngle = (360 * (dropTime / period)).toFixed(1);
-            resultAngle.innerText = leadAngle + "°";
+        const p1Btn = document.getElementById('p1-btn');
+        const p2Btn = document.getElementById('p2-btn');
+        const p1Res = document.getElementById('p1-result');
+        const p2Res = document.getElementById('p2-result');
 
-            // アニメーション反映
-            disk.style.setProperty('--period', `${period}s`);
-            disk.classList.remove('disk-rotate');
-            void disk.offsetWidth;
-            disk.classList.add('disk-rotate');
+        function startRound() {
+            target = (Math.random() * 3 + 3).toFixed(2); // 3〜6秒のランダム
+            document.getElementById('target-time').innerText = target;
+            p1Score = p2Score = null;
+            p1Res.innerText = "READY";
+            p2Res.innerText = "READY";
+            p1Res.className = p2Res.className = "text-6xl mono mb-4 text-zinc-500";
+            p1Btn.innerText = p2Btn.innerText = "START";
         }
 
-        document.getElementById('test-btn').addEventListener('click', () => {
-            const dropTime = inputDrop.value;
-            rod.style.setProperty('--drop-time', `${dropTime}s`);
-            
-            rod.classList.remove('rod-animation');
-            void rod.offsetWidth;
-            rod.classList.add('rod-animation');
+        function handleTap(player) {
+            const now = performance.now();
+            if (player === 1) {
+                if (p1Btn.innerText === "START") {
+                    p1Start = now; p1Btn.innerText = "STOP"; p1Res.innerText = "WAIT...";
+                } else if (p1Score === null) {
+                    p1Score = (now - p1Start) / 1000;
+                    p1Res.innerText = p1Score.toFixed(3);
+                    checkWinner();
+                }
+            } else {
+                if (p2Btn.innerText === "START") {
+                    p2Start = now; p2Btn.innerText = "STOP"; p2Res.innerText = "WAIT...";
+                } else if (p2Score === null) {
+                    p2Score = (now - p2Start) / 1000;
+                    p2Res.innerText = p2Score.toFixed(3);
+                    checkWinner();
+                }
+            }
+        }
+
+        function checkWinner() {
+            if (p1Score !== null && p2Score !== null) {
+                const diff1 = Math.abs(target - p1Score);
+                const diff2 = Math.abs(target - p2Score);
+                if (diff1 < diff2) {
+                    p1Res.classList.add('text-emerald-400');
+                    document.getElementById('p1-area').classList.add('bg-emerald-950');
+                } else {
+                    p2Res.classList.add('text-emerald-400');
+                    document.getElementById('p2-area').classList.add('bg-emerald-950');
+                }
+            }
+        }
+
+        p1Btn.addEventListener('click', () => handleTap(1));
+        p2Btn.addEventListener('click', () => handleTap(2));
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            document.getElementById('p1-area').classList.remove('bg-emerald-950');
+            document.getElementById('p2-area').classList.remove('bg-emerald-950');
+            startRound();
         });
 
-        [inputPeriod, inputDrop].forEach(el => el.addEventListener('input', updateValues));
-        updateValues();
+        startRound();
     </script>
 </body>
 </html>

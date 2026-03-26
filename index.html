@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地球誕生からの総自転数カウンター</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        .digital-font { font-family: 'Share Tech Mono', monospace; }
+        .glow { text-shadow: 0 0 15px rgba(52, 211, 153, 0.5); }
+    </style>
+</head>
+<body class="bg-black text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-3xl w-full bg-slate-900 rounded-3xl p-10 shadow-2xl border border-emerald-900/30 text-center relative overflow-hidden">
+        <div class="absolute -top-24 -left-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
+        
+        <h1 class="text-xl font-bold mb-10 text-emerald-500 tracking-[0.3em] uppercase">Earth Rotation Epoch</h1>
+        
+        <div class="space-y-12">
+            <div>
+                <p class="text-xs text-slate-500 mb-2 tracking-widest">ESTIMATED PLANET AGE</p>
+                <div class="text-3xl digital-font text-slate-300">
+                    4,600,000,000 YEARS
+                </div>
+            </div>
+
+            <div class="relative py-8">
+                <p class="text-xs text-emerald-400 mb-4 tracking-widest uppercase italic">Total Rotations Since Formation</p>
+                <div id="rotations" class="text-5xl md:text-6xl lg:text-7xl digital-font text-emerald-400 font-bold glow leading-tight break-all">
+                    0
+                </div>
+                <p class="mt-6 text-slate-400 text-lg">回まわった時！</p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 pt-4">
+                <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                    <p class="text-[10px] text-slate-500">CURRENT TIME</p>
+                    <div id="clock" class="text-sm digital-font">00:00:00</div>
+                </div>
+                <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                    <p class="text-[10px] text-slate-500">AVG LENGTH OF DAY</p>
+                    <div class="text-sm digital-font text-blue-400">VARIES (6h ~ 24h)</div>
+                </div>
+            </div>
+        </div>
+
+        <p class="mt-12 text-[10px] text-slate-600 leading-relaxed">
+            ※計算式：地球誕生時（46億年前）の自転周期を6時間、現在を24時間と仮定し、<br>
+            その変化を線形的として算出した近似値です。
+        </p>
+    </div>
+
+    <script>
+        function updateCounter() {
+            const now = new Date();
+            
+            // 1. 時計表示
+            document.getElementById('clock').innerText = now.toLocaleString();
+
+            // 2. 地球誕生からの回転数計算
+            const ageInYears = 4600000000; // 46億年
+            const daysInYear = 365.2425;
+            
+            // 誕生時と現在の「1日の長さ（秒）」
+            const secondsInDayStart = 6 * 3600; // 6時間
+            const secondsInDayEnd = 24 * 3600;   // 24時間
+            
+            // 平均の1日の長さ（単純化した線形モデル）
+            const avgSecondsInDay = (secondsInDayStart + secondsInDayEnd) / 2;
+            
+            // 総経過秒数（概算：46億年分）
+            const totalSecondsPast = ageInYears * daysInYear * 24 * 3600;
+            
+            // 今年の経過秒数を加算（リアルタイム性を出すため）
+            const startOfYear = new Date(now.getFullYear(), 0, 1);
+            const secondsThisYear = (now - startOfYear) / 1000;
+            const currentTotalSeconds = totalSecondsPast + secondsThisYear;
+
+            // 回転数 = 総秒数 / 平均の1日の長さ
+            // 注意: 実際はもっと複雑ですが、フレーズの勢いを重視
+            const totalRotations = currentTotalSeconds / avgSecondsInDay;
+
+            // カンマ区切りと小数点10桁で表示
+            document.getElementById('rotations').innerText = Math.floor(totalRotations).toLocaleString();
+        }
+
+        // リアルタイム更新
+        setInterval(updateCounter, 100);
+        updateCounter();
+    </script>
+</body>
+</html>

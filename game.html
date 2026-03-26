@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARCADE ANALYZER - 回転攻略</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .target-line { transition: transform 0.05s linear; }
+        @keyframes scan {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .scanning { animation: scan var(--duration) linear infinite; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white font-mono p-4 min-h-screen flex flex-col items-center">
+
+    <div class="max-w-md w-full bg-slate-800 border-2 border-emerald-500 rounded-xl p-6 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+        <h1 class="text-center text-emerald-400 font-bold mb-4">ROTATION ANALYZER v1.0</h1>
+
+        <div class="relative w-48 h-48 mx-auto mb-6 border-4 border-slate-700 rounded-full flex items-center justify-center">
+            <div id="disk" class="absolute w-full h-full border-t-4 border-emerald-400 rounded-full opacity-0"></div>
+            <div class="w-1 h-24 bg-red-500 absolute top-0 origin-bottom"></div> <div id="status" class="text-xs text-slate-400 text-center">TAP ONCE<br>PER ROTATION</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-6 text-center">
+            <div class="bg-slate-900 p-2 rounded border border-slate-700">
+                <p class="text-[10px] text-slate-500">PERIOD (秒/周)</p>
+                <div id="val-period" class="text-xl text-emerald-400">0.000</div>
+            </div>
+            <div class="bg-slate-900 p-2 rounded border border-slate-700">
+                <p class="text-[10px] text-slate-500">STABILITY (安定度)</p>
+                <div id="val-stability" class="text-xl text-blue-400">--%</div>
+            </div>
+        </div>
+
+        <button id="tap-btn" class="w-full py-8 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-xl font-bold text-2xl transition-colors shadow-lg">
+            TAP / MEASURE
+        </button>
+
+        <button id="reset-btn" class="w-full mt-4 py-2 text-xs text-slate-500 hover:text-slate-300">
+            RESET DATA
+        </button>
+
+        <div class="mt-6 text-[10px] text-slate-400 leading-relaxed border-t border-slate-700 pt-4">
+            【使用方法】<br>
+            1. 実機の円盤の「特定のマーク」が真上に来た瞬間にボタンを押す。<br>
+            2. 3〜5回繰り返すと、平均周期が計算されインジケーターが同期します。<br>
+            3. 同期後は画面の回転を見ながら「脳内リズム」を補正してください。
+        </div>
+    </div>
+
+    <script>
+        let lastTap = 0;
+        let intervals = [];
+        const disk = document.getElementById('disk');
+        const valPeriod = document.getElementById('val-period');
+        const valStability = document.getElementById('val-stability');
+        const status = document.getElementById('status');
+
+        document.getElementById('tap-btn').addEventListener('click', () => {
+            const now = performance.now();
+            
+            if (lastTap > 0) {
+                const diff = (now - lastTap) / 1000;
+                if (diff < 5) { // 5秒以上の間隔はリセット対象
+                    intervals.push(diff);
+                    if (intervals.length > 5) intervals.shift(); // 直近5回を採用
+                } else {
+                    intervals = [];
+                }
+                
+                // 平均周期の計算
+                const avg = intervals.reduce((a, b) => a + b) / intervals.length;
+                valPeriod.innerText = avg.toFixed(3);
+                
+                // 安定度の計算（標準偏差的な簡易評価）
+                const variance = intervals.map(v => Math.pow(v - avg, 2)).reduce((a, b) => a + b) / intervals.length;
+                const stability = Math.max(0, 100 - (variance * 1000)).toFixed(1);
+                valStability.innerText = stability + "%";
+
+                // アニメーションの同期
+                disk.style.opacity = "1";
+                disk.style.setProperty('--duration', `${avg}s`);
+                disk.classList.remove('scanning');
+                void disk.offsetWidth; // reflow
+                disk.classList.add('scanning');
+                
+                status.innerText = "SYNCED";
+            }
+            
+            lastTap = now;
+            // タップ時に一瞬光らせる（フィードバック）
+            document.body.classList.replace('bg-slate-900', 'bg-slate-800');
+            setTimeout(() => document.body.classList.replace('bg-slate-800', 'bg-slate-900'), 50);
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            intervals = [];
+            lastTap = 0;
+            disk.style.opacity = "0";
+            valPeriod.innerText = "0.000";
+            valStability.innerText = "--%";
+            status.innerText = "TAP ONCE PER ROTATION";
+        });
+    </script>
+</body>
+</html>
